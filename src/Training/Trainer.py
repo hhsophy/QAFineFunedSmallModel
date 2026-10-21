@@ -1,96 +1,87 @@
 import torch
-from src.evaluation import calc_loss_loader,calc_loss_batch,evaluate_model
+from src.evaluation import calc_loss_batch,evaluate_model
+from src.Training.checkpoint import Save_checkpoint
+from src.Training.utils import generate_and_print_simple
 
-from .utils import generate_and_print_simple
 
-def train_model(model,train_loader,val_loader,
-                       optimizer,device, num_epochs,
-                       eval_freq,eval_iter,start_context,
-                       tokenizer):
-    train_losses, val_losses, track_tokens_seen = [], [], []   
-    tokens_seen, global_step = 0, -1
+def Fit(
+    train_loader, val_loader, model, optimizer,
+    device, scheduler, Sittings, tokenizer):
+    num_epochs ,start_epoch= Sittings["num_epochs"],    Sittings.get("start_epoch", 0)
+    global_step ,path= Sittings.get("global_step", -1), Sittings["checkpoint_path"]
+    sampler,save_point,srt_batch = Sittings["sampler"], Sittings["save_point"],Sittings.get("batch_idx", 0)
+    eval_freq,eval_iter=Sittings["eval_freq"],Sittings["eval_iter"]
 
-    for epoch in range(num_epochs):
+    
+
+
+    train_losses, val_losses, track_tokens_seen = [], [], []
+    tokens_seen = 0
+    start_context = "who are you"
+    CheckPoint=Save_checkpoint(path)
+    for epoch in range(start_epoch, num_epochs):
+        print(f"\nStarting epoch {epoch + 1}/{num_epochs}")
         model.train()
-        for input_batch,target_batch in train_loader:
+
+        # The sampler resumes from its saved position.
+        for batch_idx, batch in enumerate(train_loader,start=srt_batch):
             optimizer.zero_grad()
-            loss=calc_loss_batch(input_batch,target_batch,model,device)
+
+            inputs, targets = batch
+            loss = calc_loss_batch(inputs, targets, model, device)
             loss.backward()
+            
+            torch.nn.utils.clip_grad_norm_((p for p in model.parameters() if p.requires_grad),max_norm=1.0)
             optimizer.step()
 
-            tokens_seen +=input_batch.numel()
-            global_step +=1
+            global_step += 1
+            scheduler.CheckGlobal(global_step)
+            scheduler.step(optimizer)
 
-            if global_step % eval_freq==0:
-                train_loss, val_loss= evaluate_model(model,train_loader,val_loader,device,eval_iter)
+            if global_step % save_point == 0:
+                CheckPoint.set_model(model)
+                CheckPoint.set_optimizer(optimizer)
+                CheckPoint.set_scheduler(scheduler)
+                CheckPoint.set_rng()
+                CheckPoint.set_sampler(sampler)
+                CheckPoint.set_batch_idx(batch_idx)
+                CheckPoint.set_epoch(epoch)
+                CheckPoint.set_epoch_completed(False)
+                CheckPoint.set_global_step(global_step)
+                CheckPoint.set_train_loss(3.0)
+                CheckPoint.save_checkpoint()
+                #print(f"Saved mid-epoch checkpoint at step {global_step}")
+            if global_step % eval_freq == 0:
+                train_loss, val_loss = evaluate_model(
+                    model, train_loader, val_loader,
+                    device, eval_iter
+                )
                 train_losses.append(train_loss)
                 val_losses.append(val_loss)
                 track_tokens_seen.append(tokens_seen)
-                print(f"Ep {epoch+1} (Step {global_step:06d}): "f"Train loss {train_loss:.3f}, "f"Val loss {val_loss:.3f}")
+                print(f"Ep {epoch+1} (Iter {global_step:06d}): "
+                    f"Train loss {train_loss:.3f}, "
+                    f"Val loss {val_loss:.3f}"
+                )
 
+                
+        print(f"Finished epoch {epoch + 1}/{num_epochs}")
         generate_and_print_simple(model,tokenizer,device,start_context)
+        srt_batch=0
 
-    return train_losses,val_losses,track_tokens_seen
-
-
-
-def main(gpt_config, settings):
-
-    torch.manual_seed(123)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    ##############################
-    # Download data if necessary
-    ##############################
-    path="D:\\codes\\text.txt"
-    with open(path, "r", encoding="utf-8") as f:
-        text_data = f.read()
-    text_data=re.sub(r'\d+'," ", raw_text) # remove numbers from the text 
-    ##############################
-    # Initialize model
-    ##############################
-
-    model = LLMModel(gpt_config)
-    model.to(device)  # no assignment model = model.to(device) necessary for nn.Module classes
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=settings["learning_rate"], weight_decay=settings["weight_decay"]
-    )
+        # Save a separate checkpoint marking the completed epoch.
+        CheckPoint.set_model(model)
+        CheckPoint.set_optimizer(optimizer)
+        CheckPoint.set_scheduler(scheduler)
+        CheckPoint.set_rng()
+        CheckPoint.set_sampler(sampler)
+        CheckPoint.set_batch_idx(batch_idx)
+        CheckPoint.set_epoch(epoch)
+        CheckPoint.set_epoch_completed(True)
+        CheckPoint.set_global_step(global_step)
+        CheckPoint.set_train_loss(3.0)
+        CheckPoint.save_checkpoint()
+        print(f"Saved mid-epoch checkpoint at step {global_step}")
 
 
-    # Train/validation ratio
-    train_ratio = 0.90
-    split_idx = int(train_ratio * len(text_data))
-
-    train_loader = create_data_loader(
-        text_data[:split_idx],
-        batch_size=settings["batch_size"],
-        max_length=gpt_config["context_length"],
-        stride=gpt_config["context_length"],
-        drop_last=True,
-        shuffle=True,
-        num_workers=0
-    )
-
-    val_loader = create_data_loader(
-        text_data[split_idx:],
-        batch_size=settings["batch_size"],
-        max_length=gpt_config["context_length"],
-        stride=gpt_config["context_length"],
-        drop_last=False,
-        shuffle=False,
-        num_workers=0
-    )
-
-    ##############################
-    # Train model
-    ##############################
-
-    tokenizer = tiktoken.get_encoding("gpt2")
-
-    train_losses, val_losses, tokens_seen = train_model_simple(
-        model, train_loader, val_loader, optimizer, device,
-        num_epochs=settings["num_epochs"], eval_freq=5, eval_iter=1,
-        start_context="enemy forces", tokenizer=tokenizer
-    )
-
-    return train_losses, val_losses, tokens_seen, model
+    return train_losses, val_losses, track_tokens_seen

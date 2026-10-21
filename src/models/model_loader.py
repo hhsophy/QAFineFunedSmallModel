@@ -1,11 +1,10 @@
 import os
 
-import requests
 import json
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 import torch
+from pathlib import Path
 
 def download_and_load_gpt2(model_size, models_dir):
     # Validate model size
@@ -39,51 +38,21 @@ def download_and_load_gpt2(model_size, models_dir):
     return settings, params
 
 
-def download_file(url, destination, backup_url=None):
-    def _attempt_download(download_url):
-        response = requests.get(download_url, stream=True, timeout=60)
-        response.raise_for_status()
+def load_gpt(config,CHOOSE_MODEL = "gpt2-small (124M)"):
+    BASE_CONFIG=config["BASE_CONFIG"]
+    model_config=config["model_configs"]
+    #CHOOSE_MODEL = "gpt2-medium (355M)"
+    BASE_CONFIG.update(model_config[CHOOSE_MODEL])
 
-        file_size = int(response.headers.get("Content-Length", 0))
+    model_size = CHOOSE_MODEL.split(" ")[-1].lstrip("(").rstrip(")")
+    path=Path(config["gpt2place"])
+    path=path.joinpath(model_size)
+    settings = json.load(open(path.joinpath("hparams.json"), "r", encoding="utf-8"))
+    params=load_gpt2_params_from_tf_ckpt(path,settings)
+    return params,BASE_CONFIG
 
-        # Check if file exists and has same size
-        if os.path.exists(destination):
-            file_size_local = os.path.getsize(destination)
-            if file_size and file_size == file_size_local:
-                print(f"File already exists and is up-to-date: {destination}")
-                return True
 
-        block_size = 1024  # 1 KB
-        desc = os.path.basename(download_url)
-        with tqdm(total=file_size, unit="iB", unit_scale=True, desc=desc) as progress_bar:
-            with open(destination, "wb") as file:
-                for chunk in response.iter_content(chunk_size=block_size):
-                    if chunk:
-                        file.write(chunk)
-                        progress_bar.update(len(chunk))
-        return True
 
-    try:
-        if _attempt_download(url):
-            return
-    except requests.exceptions.RequestException:
-        if backup_url is not None:
-            print(f"Primary URL ({url}) failed. Attempting backup URL: {backup_url}")
-            try:
-                if _attempt_download(backup_url):
-                    return
-            except requests.exceptions.RequestException:
-                pass
-
-        error_message = (
-            f"Failed to download from both primary URL ({url})"
-            f"{' and backup URL (' + backup_url + ')' if backup_url else ''}."
-            "\nCheck your internet connection or the file availability.\n"
-            "For help, visit: https://github.com/rasbt/LLMs-from-scratch/discussions/273"
-        )
-        print(error_message)
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
 
 def load_gpt2_params_from_tf_ckpt(ckpt_path, settings):
     # Initialize parameters dictionary with empty blocks for each layer

@@ -1,6 +1,23 @@
 import torch
 from functools import partial
-from torch.utils.data import Sampler
+from torch.utils.data import Sampler,DataLoader
+from .preprocessing import InstructionDataset
+import tiktoken
+
+
+def Create_Data_Loader(Sittings,Data,tokenizer=None,sampler=None,device="cpu",context_size=720):
+    
+    if tokenizer is None:
+        tokenizer=tiktoken.get_encoding("gpt2")
+    Data=InstructionDataset(Data,tokenizer)
+    if sampler is None:
+        sampler=ResumableRandomSampler(Data)
+    customized_collate_fn=cus_collate(device,context_size)
+
+    data_loader=DataLoader(Data,batch_size=Sittings["batch_size"],collate_fn=customized_collate_fn,
+                            sampler=sampler,drop_last=True,num_workers=Sittings["num_workers"])
+    return data_loader,sampler
+
 
 class ResumableRandomSampler(Sampler):
     def __init__(self, dataset, seed=123):
@@ -50,17 +67,17 @@ class ResumableRandomSampler(Sampler):
         self.position = 0
 
 def custom_collate_fn(batch,pad_token_id=50256,ignore_index=-100,allowed_max_length=None,device="cpu"):
-    batch_max_length = max(len(item)+1 for item in batch)
+    batch_max_length = max(len(item["encoded"])+1 for item in batch)
     inputs_lst, targets_lst = [], []
 
     for item in batch:
-        new_item = item.copy()
+        new_item = item["encoded"].copy()
         new_item += [pad_token_id]
 
         padded = (new_item + [pad_token_id] *(batch_max_length - len(new_item)))
 
-        inputs = torch.tensor(padded[:-1])     
-        targets = torch.tensor(padded[1:]) 
+        inputs = torch.tensor(padded)     
+        targets = torch.tensor(padded) 
 
         mask=targets==pad_token_id
         indices=torch.nonzero(mask).squeeze()
@@ -72,18 +89,18 @@ def custom_collate_fn(batch,pad_token_id=50256,ignore_index=-100,allowed_max_len
             targets=targets[:allowed_max_length]
 
         inputs_lst.append(inputs)
+        targets[:item["prom_len"]]=-100
         targets_lst.append(targets)
-
     inputs_tensor=torch.stack(inputs_lst).to(device)
     targets_tensor=torch.stack(targets_lst).to(device)
 
     return inputs_tensor, targets_tensor
 
-def cus_collate(device,allowed_max_length):
+def cus_collate(device,allowed_max_length=1024):
     customized_collate_fn = partial(
         custom_collate_fn,
         device=device,
-        allowed_max_length=1024
+        allowed_max_length=allowed_max_length
     )
 
     return customized_collate_fn

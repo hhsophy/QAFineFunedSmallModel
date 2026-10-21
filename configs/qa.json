@@ -15,9 +15,28 @@
 ,
 
 
+    "Sittings":{"num_epochs":3,
+            "start_epoch":0,
+            "global_step":-1,
+            "checkpoint_path":"D:/gpt2-qa/CheckPoint/latest.pt",
+            "sampler":null,
+            "initial_lr":0.0004,
+            "peak_lr":0.01,
+            "warmup":0.2,
+            "save_point":5,
+            "seed":123,
+            "train_portion":0.8,
+            "test_portion":0.15,
+            "num_workers":0,
+            "batch_size":2,
+            "weight_decay":0.1,
+            "rank":16,
+            "alpha":16,
+            "eval_freq":5,
+            "eval_iter":1
+            }
 
-
-
+,
 "training":{
   "batch_size": 2,
   "gradient_accumulation_steps": 8,
@@ -32,7 +51,39 @@
 
   "data_path":"dataset/databricks15k.json"
 
+,
+"Settings2" : {
+    "training": {
+        "num_epochs": 3,
+        "start_epoch": 0,
+        "global_step": 0,
+        "seed": 123    },
 
+    "data": {
+        "train_portion": 0.80,
+        "val_portion": 0.05,
+        "test_portion": 0.15,
+        "batch_size": 1,
+        "num_workers": 0},
+
+    "optimization": {
+        "initial_lr": 4e-4,
+        "peak_lr": 4e-4,
+        "warmup": 0.1,
+        "weight_decay": 0.1},
+
+    "lora": {
+        "rank": 16,
+        "alpha": 16},
+
+    "evaluation": {
+        "eval_freq": 100,
+        "eval_iter": 20},
+
+    "checkpoint": {
+        "path": "D:/gpt2-qa/CheckPoint/latest.pt",
+        "save_point": 500}
+}
 
 
 
