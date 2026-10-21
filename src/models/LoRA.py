@@ -8,7 +8,7 @@ class LoRALayer(nn.Module):
         self.A=nn.Parameter(torch.empty(in_dim,rank))
         nn.init.kaiming_uniform_(self.A,a=math.sqrt(5))
         self.B=nn.Parameter(torch.zeros(rank,out_dim))
-        self.alpha=alpha
+        self.alpha=alpha/rank
 
 
     def forward(self,x):
