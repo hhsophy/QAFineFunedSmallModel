@@ -1,0 +1,11 @@
+## Acknowledgments
+
+This project builds upon concepts and code from Sebastian Raschka's *Build a Large Language Model (From Scratch)*, published by Manning Publications.
+
+- **Author:** Sebastian Raschka
+- **Book:** Build a Large Language Model (From Scratch)
+- **ISBN:** 978-1633437166
+- **Repository:** https://github.com/rasbt/LLMs-from-scratch
+- **License:** Apache-2.0
+
+The original project is acknowledged as the source of the relevant code and implementation ideas. Modifications made for this project are documented separately.
