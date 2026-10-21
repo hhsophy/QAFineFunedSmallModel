@@ -43,8 +43,7 @@ def main(resume=False,CHOOSE_MODEL = "gpt2-small (124M)"):
     FreezeModel(model)
     replace_linear_with_lora(model,rank=Sittings["rank"],alpha=Sittings["alpha"])
     model.to(device)
-    optimizer=torch.optim.AdamW(model.parameters(), weight_decay=Sittings["weight_decay"])
-    
+    optimizer=torch.optim.AdamW((p for p in model.parameters() if p.requires_grad),lr=Sittings["initial_lr"], weight_decay=Sittings["weight_decay"])
     checkpoint_path = Path(Sittings["checkpoint_path"])
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 
