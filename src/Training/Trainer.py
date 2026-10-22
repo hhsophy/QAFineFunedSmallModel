@@ -33,14 +33,14 @@ def Fit(
                 loss.backward()
                 
                 torch.nn.utils.clip_grad_norm_((p for p in model.parameters() if p.requires_grad),max_norm=1.0)
-                optimizer.step()
 
                 global_step += 1
                 scheduler.CheckGlobal(global_step)
                 scheduler.step(optimizer)
+                optimizer.step()
 
                 if global_step % save_point == 0:
-                    #CheckPoint.set_model(model)
+                    CheckPoint.set_model(model)
                     CheckPoint.set_lora_only(model)
                     CheckPoint.set_optimizer(optimizer)
                     CheckPoint.set_scheduler(scheduler)
@@ -72,7 +72,7 @@ def Fit(
             srt_batch=0
 
             # Save a separate checkpoint marking the completed epoch.
-            #CheckPoint.set_model(model)
+            CheckPoint.set_model(model)
             CheckPoint.set_lora_only(model)
             CheckPoint.set_optimizer(optimizer)
             CheckPoint.set_scheduler(scheduler)
@@ -85,9 +85,8 @@ def Fit(
             CheckPoint.set_train_loss(3.0)
             CheckPoint.save_checkpoint()
             print(f"Saved ew epoch checkpoint at step {global_step}")
-
-
         return train_losses, val_losses, track_tokens_seen
+    
     except KeyboardInterrupt:
         print("\nTraining interrupted. Returning the latest losses...")
         return train_losses, val_losses,track_tokens_seen

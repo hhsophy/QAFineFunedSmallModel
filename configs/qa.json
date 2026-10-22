@@ -15,7 +15,7 @@
 ,
 "results_path":"D:/gpt2-qa/results/losses.pt"
 , 
-    "Sittings":{"num_epochs":3,
+    "Sittings":{"num_epochs":10,
             "start_epoch":0,
             "global_step":-1,
             "checkpoint_path":"D:/gpt2-qa/CheckPoint/latest.pt",
@@ -23,16 +23,16 @@
             "initial_lr":0.0001,
             "peak_lr":0.0004,
             "warmup":0.1,
-            "save_point":100,
+            "save_point":50,
             "seed":123,
             "train_portion":0.8,
             "test_portion":0.15,
             "num_workers":0,
-            "batch_size":3,
+            "batch_size":2,
             "weight_decay":0.1,
             "rank":16,
             "alpha":16,
-            "eval_freq":10,
+            "eval_freq":20,
             "eval_iter":5
             }
 

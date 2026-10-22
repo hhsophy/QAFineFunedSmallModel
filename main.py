@@ -72,7 +72,7 @@ def main(resume=False,CHOOSE_MODEL = "gpt2-small (124M)"):
     else:
         print("Starting training from epoch 0")
     
-    
+    print (f"total steps : {len(Train_loader)*Sittings["num_epochs"]}")
     train_losses,val_losses,_=Fit(Train_loader,Val_loader,model,optimizer,device,scheduler,Sittings,tokenizer)
     save_losses(train_losses=train_losses,val_losses=val_losses,path=config["results_path"],resume=resume)
     #return train_losses,val_losses,track_tokens_seen

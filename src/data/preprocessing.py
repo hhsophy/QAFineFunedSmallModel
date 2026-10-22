@@ -58,7 +58,7 @@ class InstructionDataset(Dataset):
 
 def Data_Split(path,train_ratio=0.8,test_ratio=0.1):
         data=Load_data(path)
-        Data=ConvToDict(data)[:1000]
+        Data=ConvToDict(data)
         train_portion=int(len(Data)*train_ratio)
         test_portion=int(len(Data)*test_ratio)
         train_data=Data[:train_portion]
