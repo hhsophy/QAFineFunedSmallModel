@@ -5,9 +5,12 @@ import numpy as np
 class LoRALayer(nn.Module):
     def __init__(self, in_dim, out_dim,rank,alpha):
         super().__init__()
+        if rank <= 0:
+            raise ValueError("rank must be greater than 0")
         self.A=nn.Parameter(torch.empty(in_dim,rank))
-        nn.init.kaiming_uniform_(self.A,a=math.sqrt(5))
         self.B=nn.Parameter(torch.zeros(rank,out_dim))
+        nn.init.kaiming_uniform_(self.A,a=math.sqrt(5))
+
         self.alpha=alpha/rank
 
 

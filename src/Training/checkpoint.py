@@ -135,21 +135,27 @@ class Save_checkpoint:
         self.scheduler=None
         self.train_loss=None
         self.epoch_completed=False
+        self.lora_state=None
 
     def seve_all(self,model,optimizer,epoch,batch_idx,
-                 global_step,sampler,scheduler=None,
+                 global_step,sampler,lora=False,scheduler=None,
                  train_loss=None,epoch_completed=False):
         checkpoint = {
                 "epoch": epoch,
                 "batch_idx": batch_idx,
                 "epoch_completed": epoch_completed,
                 "global_step": global_step,
-                "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "rng_state": get_rng_state(),
                 "train_loss": train_loss,
                 "epoch_completed":epoch_completed
             }
+        if not lora:
+            checkpoint["model_state_dict"]= model.state_dict()
+
+        if lora :
+            self.set_lora_only(model)
+            checkpoint["lora_state"]=self.lora_state
         
         if scheduler is not None:
             checkpoint["scheduler_state_dict"] = scheduler.state_dict()
@@ -163,7 +169,10 @@ class Save_checkpoint:
     
     def set_model(self,model):
         self.model=model
-    
+
+    def set_lora_only(self,model):
+        self.lora_state = {name: param.detach().cpu() for name, param in model.state_dict().items() if ".lora.A" in name or ".lora.B" in name}
+
     def set_optimizer(self,optimizer):
         self.optimizer=optimizer
 
@@ -217,6 +226,9 @@ class Save_checkpoint:
     
         if self.sampler is not None:
             checkpoint["sampler_state_dict"] = self.sampler.state_dict()
+        if self.lora_state is not None:
+            checkpoint["lora_state"] = self.lora_state
+
     
         temp_path = self.path.with_suffix(self.path.suffix + ".tmp")
         torch.save(checkpoint, temp_path)
@@ -257,6 +269,10 @@ class Load_Checkpoint:
         if "rng_state" not in self.checkpoint:
             raise ValueError("Checkpoint does not contain random number generator state.")
         set_rng_state(self.checkpoint["rng_state"])
+    def load_lora_only(self,model):
+            if "lora_state" not in self.checkpoint:
+                raise ValueError("Checkpoint does not contain LoRA state.")
+            model.load_state_dict(self.checkpoint["lora_state"], strict=False)
 
     def return_rest(self):
         epoch = self.checkpoint["epoch"]

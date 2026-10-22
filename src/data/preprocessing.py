@@ -16,7 +16,7 @@ def format_example(example):
 
 
 class InstructionDataset(Dataset):
-    def __init__(self,data,tokenizer=None):
+    def __init__(self,data,context_size=1024,tokenizer=None):
         self.data=data
         self.encoded_texts=[]
         if tokenizer is None:
@@ -25,22 +25,40 @@ class InstructionDataset(Dataset):
             self.tokenizer=tokenizer
 
         for entry in data:
-            instruction_plus_input=format_example(entry)
-            self.encoded_texts.append(tokenizer.encode(instruction_plus_input))
+            context=f"Context: {entry["instruction"]}\n"
+            question=f"Question: {entry["question"]} \n"
+            answer=f"Answer: {entry["answer"]}"
 
+            context_encoded=self.tokenizer.encode(context)
+            question_encoded=self.tokenizer.encode(question)
+            answer_encoded=self.tokenizer.encode(answer)
+            context_legth=len(context_encoded)
+            question_length=len(question_encoded)
+            answer_length=len(answer_encoded)
+        
+            if context_legth + question_length + answer_length > context_size:
+                if context_legth>question_length:
+                    context_encoded=context_encoded[:context_size-(question_length+answer_length)]
+                    context_legth=len(context_encoded)
+                else:
+                    question_encoded=question_encoded[:context_size-(context_legth+answer_length)]
+                    question_length=len(question_encoded)
+            encoded_text=context_encoded+question_encoded+answer_encoded
+            prompt_length=context_legth+question_length
+            example={"encoded_text":encoded_text,"prompt_length":prompt_length}
+            #instruction_plus_input=format_example(entry)
+            self.encoded_texts.append(example)
+        
     def __getitem__(self, index):
-        answer=self.data[index]["answer"]
-        input_without_answer=self.tokenizer.encode(format_example(self.data[index]).removesuffix(answer))
-        
-        return {"encoded":self.encoded_texts[index],"prom_len":len(input_without_answer)}
-        
+        return self.encoded_texts[index]
+    
     def __len__(self):
         return len(self.data)
 
 
 def Data_Split(path,train_ratio=0.8,test_ratio=0.1):
         data=Load_data(path)
-        Data=ConvToDict(data)[:100]
+        Data=ConvToDict(data)[:1000]
         train_portion=int(len(Data)*train_ratio)
         test_portion=int(len(Data)*test_ratio)
         train_data=Data[:train_portion]

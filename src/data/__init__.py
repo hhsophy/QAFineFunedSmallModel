@@ -1,5 +1,5 @@
 # src/models/__init__.py
-name= "Data"
+name= "data"
 
 
 from .dataset import *

@@ -13,27 +13,27 @@
 
 "gpt2place":"D:/gpt2-qa/gpt2"
 ,
-
-
+"results_path":"D:/gpt2-qa/results/losses.pt"
+, 
     "Sittings":{"num_epochs":3,
             "start_epoch":0,
             "global_step":-1,
             "checkpoint_path":"D:/gpt2-qa/CheckPoint/latest.pt",
             "sampler":null,
-            "initial_lr":0.0004,
-            "peak_lr":0.01,
-            "warmup":0.2,
-            "save_point":5,
+            "initial_lr":0.0001,
+            "peak_lr":0.0004,
+            "warmup":0.1,
+            "save_point":100,
             "seed":123,
             "train_portion":0.8,
             "test_portion":0.15,
             "num_workers":0,
-            "batch_size":2,
+            "batch_size":3,
             "weight_decay":0.1,
             "rank":16,
             "alpha":16,
-            "eval_freq":5,
-            "eval_iter":1
+            "eval_freq":10,
+            "eval_iter":5
             }
 
 ,

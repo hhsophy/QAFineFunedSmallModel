@@ -1,15 +1,17 @@
 import torch
 import json
+import tiktoken
 from pathlib import Path
 from src.data.collate import Create_Data_Loader
 from src.data.preprocessing import Data_Split
-import tiktoken
 from src.models.LR_scheduler import lr_scheduler_step
 from src.models.model_loader import load_gpt,load_weights_into_gpt
 from src.models.gpt_model import LLMModel
 from src.models.LoRA import replace_linear_with_lora,FreezeModel
-from .checkpoint import Load_Checkpoint
-from .Trainer import Fit
+from src.Training.checkpoint import Load_Checkpoint
+from src.Training.Trainer import Fit
+from src.Training.utils import save_losses
+
 
 
 def main(resume=False,CHOOSE_MODEL = "gpt2-small (124M)"):
@@ -28,18 +30,22 @@ def main(resume=False,CHOOSE_MODEL = "gpt2-small (124M)"):
     
     Train_loader,Train_sampler=Create_Data_Loader(Sittings,Train_Data,context_size=config["BASE_CONFIG"]["context_length"])
     Val_loader,Val_sampler=Create_Data_Loader(Sittings,Val_Data,context_size=config["BASE_CONFIG"]["context_length"])
-    #Test_loader,Test_sampler=Create_Data_Loader(Sittings,Test_Data,context_size=config["BASE_CONFIG"]["context_length"])
+    Test_loader,Test_sampler=Create_Data_Loader(Sittings,Test_Data,context_size=config["BASE_CONFIG"]["context_length"])
     
     Sittings["sampler"]=Train_sampler
 
 
     scheduler=lr_scheduler_step(Sittings,len(Train_loader))
 
-    params,BASE_CONFIG=load_gpt(config,CHOOSE_MODEL)
+    #params,BASE_CONFIG=load_gpt(config,CHOOSE_MODEL)
+    BASE_CONFIG=config["BASE_CONFIG"]
     BASE_CONFIG.update(config["model_configs"][CHOOSE_MODEL])
 
     model=LLMModel(BASE_CONFIG)
-    load_weights_into_gpt(model,params)
+    state_dict=torch.load(f"{config["gpt2place"]}/{CHOOSE_MODEL}.pt")
+    model.load_state_dict(state_dict)
+    #load_weights_into_gpt(model,params)
+    
     FreezeModel(model)
     replace_linear_with_lora(model,rank=Sittings["rank"],alpha=Sittings["alpha"])
     model.to(device)
@@ -49,7 +55,8 @@ def main(resume=False,CHOOSE_MODEL = "gpt2-small (124M)"):
 
     CheckPoint=Load_Checkpoint(checkpoint_path)
     if resume and checkpoint_path.exists():
-            CheckPoint.load_model(model)
+            #CheckPoint.load_model(model)
+            CheckPoint.load_lora_only(model)
             CheckPoint.load_optimizer(optimizer)
             CheckPoint.load_rng()
             CheckPoint.load_sampler(Train_sampler)
@@ -66,7 +73,8 @@ def main(resume=False,CHOOSE_MODEL = "gpt2-small (124M)"):
         print("Starting training from epoch 0")
     
     
-    train_losses,val_losses,track_tokens_seen=Fit(Train_loader,Val_loader,model,optimizer,device,scheduler,Sittings,tokenizer)
+    train_losses,val_losses,_=Fit(Train_loader,Val_loader,model,optimizer,device,scheduler,Sittings,tokenizer)
+    save_losses(train_losses=train_losses,val_losses=val_losses,path=config["results_path"],resume=resume)
     #return train_losses,val_losses,track_tokens_seen
 
 

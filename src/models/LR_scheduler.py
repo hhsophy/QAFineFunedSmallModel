@@ -15,19 +15,45 @@ class lr_scheduler_step():
         
         self.total_steps = self.loader_len * Sittings["num_epochs"]
         self.warmup_steps = int(self.warmup_ratio * self.total_steps)
+
+        if self.total_steps <= 0:
+            raise ValueError("total_steps must be positive")
+        self.warmup_steps = min(self.warmup_steps, self.total_steps)
+
         self.lr_increment = (self.peak_lr - self.initial_lr) / self.warmup_steps
         self.track_lrs=[]
-        self.lr=None
+        self.lr=self.initial_lr
+
     def CheckGlobal(self,global_step):
-        if global_step < self.warmup_steps:            
+        """if  global_step < self.warmup_steps:            
             self.lr = self.initial_lr + global_step * self.lr_increment
         else:
-            self.lr = self.peak_lr
+            self.lr = self.peak_lr"""
+
+        if self.warmup_steps > 0 and global_step < self.warmup_steps:
+            # Linear warmup
+            progress = global_step / self.warmup_steps
+            self.lr = (self.initial_lr+ progress * (self.peak_lr - self.initial_lr)
+            )
+        else:
+            # Linear decay from peak_lr to initial_lr
+            decay_steps = self.total_steps - self.warmup_steps
+
+            if decay_steps <= 0:
+                self.lr = self.peak_lr
+            else:
+                progress = ((global_step - self.warmup_steps)/ decay_steps)
+                progress = min(max(progress, 0.0), 1.0)
+
+                self.lr = ( self.peak_lr - progress * (self.peak_lr - self.initial_lr))
+        
         self.track_lrs.append(self.lr)
 
                     
         
     def step(self,optimizer):
+        if not isinstance(optimizer, Optimizer):
+            raise TypeError("optimizer must be a PyTorch Optimizer")
         if isinstance(optimizer,Optimizer):
             for param_group in optimizer.param_groups:   
                 param_group["lr"] = self.lr

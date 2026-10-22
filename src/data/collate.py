@@ -9,7 +9,7 @@ def Create_Data_Loader(Sittings,Data,tokenizer=None,sampler=None,device="cpu",co
     
     if tokenizer is None:
         tokenizer=tiktoken.get_encoding("gpt2")
-    Data=InstructionDataset(Data,tokenizer)
+    Data=InstructionDataset(Data,tokenizer=tokenizer)
     if sampler is None:
         sampler=ResumableRandomSampler(Data)
     customized_collate_fn=cus_collate(device,context_size)
@@ -67,17 +67,17 @@ class ResumableRandomSampler(Sampler):
         self.position = 0
 
 def custom_collate_fn(batch,pad_token_id=50256,ignore_index=-100,allowed_max_length=None,device="cpu"):
-    batch_max_length = max(len(item["encoded"])+1 for item in batch)
+    batch_max_length = max(len(item["encoded_text"])+1 for item in batch)
     inputs_lst, targets_lst = [], []
 
     for item in batch:
-        new_item = item["encoded"].copy()
+        new_item = item["encoded_text"].copy()
         new_item += [pad_token_id]
 
         padded = (new_item + [pad_token_id] *(batch_max_length - len(new_item)))
 
-        inputs = torch.tensor(padded)     
-        targets = torch.tensor(padded) 
+        inputs = torch.tensor(padded[:-1])     
+        targets = torch.tensor(padded[1:]) 
 
         mask=targets==pad_token_id
         indices=torch.nonzero(mask).squeeze()
@@ -89,7 +89,7 @@ def custom_collate_fn(batch,pad_token_id=50256,ignore_index=-100,allowed_max_len
             targets=targets[:allowed_max_length]
 
         inputs_lst.append(inputs)
-        targets[:item["prom_len"]]=-100
+        targets[:item["prompt_length"]]=ignore_index
         targets_lst.append(targets)
     inputs_tensor=torch.stack(inputs_lst).to(device)
     targets_tensor=torch.stack(targets_lst).to(device)

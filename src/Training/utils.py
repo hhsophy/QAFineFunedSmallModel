@@ -1,6 +1,8 @@
 
 import torch
 import tiktoken
+import json
+from pathlib import Path
 tokenizer=tiktoken.get_encoding("gpt2")
 
 # convert from text to token IDs
@@ -66,3 +68,37 @@ def generate_and_print_simple(model,tokenizer,device,start_context):
     decoded_text=token_ids_to_text(token_ids,tokenizer)
     print(decoded_text.replace("\n", " "))     
     model.train()
+
+
+
+def save_losses(train_losses=[], test_losses=[], val_losses=[],
+                path="results/losses.json", resume=True):
+
+    path = Path(path)
+
+    if resume and path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            losses = json.load(f)
+    else:
+        losses = {
+            "train": [],
+            "test": [],
+            "val": []
+        }
+
+    # Make sure all three keys exist
+    for key in ("train", "test", "val"):
+        losses.setdefault(key, [])
+
+    # Append new losses
+    losses["train"].extend(train_losses)
+    losses["test"].extend(test_losses)
+    losses["val"].extend(val_losses)
+
+    # Create the directory if it doesn't exist
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create the file or overwrite the existing file
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(losses, f, indent=4)
+
