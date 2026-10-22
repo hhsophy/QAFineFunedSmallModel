@@ -136,6 +136,7 @@ class Save_checkpoint:
         self.train_loss=None
         self.epoch_completed=False
         self.lora_state=None
+        self.training_time=None
 
     def seve_all(self,model,optimizer,epoch,batch_idx,
                  global_step,sampler,lora=False,scheduler=None,
@@ -198,6 +199,9 @@ class Save_checkpoint:
     def set_train_loss(self,train_loss):
         self.train_loss=train_loss
 
+    def set_train_time(self,time):
+        self.training_time=time
+
     def save_checkpoint(self):
         checkpoint = {}
     
@@ -228,6 +232,9 @@ class Save_checkpoint:
             checkpoint["sampler_state_dict"] = self.sampler.state_dict()
         if self.lora_state is not None:
             checkpoint["lora_state"] = self.lora_state
+
+        if self.training_time is not None:
+            checkpoint["total_training_time"] = self.training_time
 
     
         temp_path = self.path.with_suffix(self.path.suffix + ".tmp")
@@ -289,6 +296,8 @@ class Load_Checkpoint:
             "start_epoch": start_epoch,
             "batch_idx": batch_idx,
             "global_step": self.checkpoint["global_step"],
+            "total_training_time":self.checkpoint["total_training_time"]
+
         }
     """def return_rest(self):
         return {

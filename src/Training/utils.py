@@ -69,6 +69,11 @@ def generate_and_print_simple(model,tokenizer,device,start_context):
     print(decoded_text.replace("\n", " "))     
     model.train()
 
+def format_time(seconds):
+    hours, remainder = divmod(int(seconds), 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
 def save_losses(train_losses=[], test_losses=[], val_losses=[],

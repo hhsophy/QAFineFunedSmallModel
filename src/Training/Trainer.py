@@ -2,18 +2,18 @@ import torch
 from src.evaluation import calc_loss_batch,evaluate_model
 from src.Training.checkpoint import Save_checkpoint
 from src.Training.utils import generate_and_print_simple
-
+import time
 
 def Fit(
     train_loader, val_loader, model, optimizer,
-    device, scheduler, Sittings, tokenizer):
+    device, scheduler, Sittings, tokenizer,Resume):
     num_epochs ,start_epoch= Sittings["num_epochs"],    Sittings.get("start_epoch", 0)
     global_step ,path= Sittings.get("global_step", -1), Sittings["checkpoint_path"]
     sampler,save_point,srt_batch = Sittings["sampler"], Sittings["save_point"],Sittings.get("batch_idx", 0)
     eval_freq,eval_iter=Sittings["eval_freq"],Sittings["eval_iter"]
 
-    
-
+    total_training_time = Sittings.get("total_training_time", 0.0) if Resume else 0.0
+    session_start_time = time.perf_counter()
 
     train_losses, val_losses, track_tokens_seen = [], [], []
     tokens_seen = 0
@@ -51,6 +51,10 @@ def Fit(
                     CheckPoint.set_epoch_completed(False)
                     CheckPoint.set_global_step(global_step)
                     CheckPoint.set_train_loss(loss.item())
+                    session_elapsed = time.perf_counter() - session_start_time
+                    session_start_time = time.perf_counter()
+                    current_total_time = total_training_time + session_elapsed
+                    CheckPoint.set_train_time(current_total_time)
                     CheckPoint.save_checkpoint()
                     print(f"Saved mid-epoch checkpoint at step {global_step}")
                 if global_step % eval_freq == 0:
@@ -83,7 +87,12 @@ def Fit(
             CheckPoint.set_epoch_completed(True)
             CheckPoint.set_global_step(global_step)
             CheckPoint.set_train_loss(3.0)
+            session_elapsed = time.perf_counter() - session_start_time
+            session_start_time = time.perf_counter()
+            current_total_time = total_training_time + session_elapsed
+            CheckPoint.set_train_time(current_total_time)
             CheckPoint.save_checkpoint()
+
             print(f"Saved ew epoch checkpoint at step {global_step}")
         return train_losses, val_losses, track_tokens_seen
     
