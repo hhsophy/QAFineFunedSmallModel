@@ -1,4 +1,4 @@
-name="Training"
+name='Training'
 
 
 from .utils import *

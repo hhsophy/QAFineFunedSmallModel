@@ -7,21 +7,21 @@ import time
 def Fit(
     train_loader, val_loader, model, optimizer,
     device, scheduler, Sittings, tokenizer,Resume):
-    num_epochs ,start_epoch= Sittings["num_epochs"],    Sittings.get("start_epoch", 0)
-    global_step ,path= Sittings.get("global_step", -1), Sittings["checkpoint_path"]
-    sampler,save_point,srt_batch = Sittings["sampler"], Sittings["save_point"],Sittings.get("batch_idx", 0)
-    eval_freq,eval_iter=Sittings["eval_freq"],Sittings["eval_iter"]
+    num_epochs ,start_epoch= Sittings['num_epochs'],    Sittings.get('start_epoch', 0)
+    global_step ,path= Sittings.get('global_step', -1), Sittings['checkpoint_path']
+    sampler,save_point,srt_batch = Sittings['sampler'], Sittings['save_point'],Sittings.get('batch_idx', 0)
+    eval_freq,eval_iter=Sittings['eval_freq'],Sittings['eval_iter']
 
-    total_training_time = Sittings.get("total_training_time", 0.0) if Resume else 0.0
+    total_training_time = Sittings.get('total_training_time', 0.0) if Resume else 0.0
     session_start_time = time.perf_counter()
 
-    train_losses, val_losses, track_tokens_seen = [], [], []
+    train_losses, val_losses = [], []
     tokens_seen = 0
-    start_context = "The capital of Iraq is?"
+    start_context = 'The capital of Iraq is?'
     CheckPoint=Save_checkpoint(path)
     try:
         for epoch in range(start_epoch, num_epochs):
-            print(f"\nStarting epoch {epoch + 1}/{num_epochs}")
+            print(f'\nStarting epoch {epoch + 1}/{num_epochs}')
             model.train()
 
             # The sampler resumes from its saved position.
@@ -54,9 +54,10 @@ def Fit(
                     session_elapsed = time.perf_counter() - session_start_time
                     session_start_time = time.perf_counter()
                     current_total_time = total_training_time + session_elapsed
-                    CheckPoint.set_train_time(current_total_time)
+                    total_training_time=current_total_time
+                    CheckPoint.set_train_time(total_training_time)
                     CheckPoint.save_checkpoint()
-                    print(f"Saved mid-epoch checkpoint at step {global_step}")
+                    print(f'Saved mid-epoch checkpoint at step {global_step}')
                 if global_step % eval_freq == 0:
                     train_loss, val_loss = evaluate_model(
                         model, train_loader, val_loader,
@@ -64,14 +65,13 @@ def Fit(
                     )
                     train_losses.append(train_loss)
                     val_losses.append(val_loss)
-                    track_tokens_seen.append(tokens_seen)
-                    print(f"Ep {epoch+1} (Iter {global_step:06d}): "
-                        f"Train loss {train_loss:.3f}, "
-                        f"Val loss {val_loss:.3f}"
+                    print(f'Ep {epoch+1} (Iter {global_step:06d}): '
+                        f'Train loss {train_loss:.3f}, '
+                        f'Val loss {val_loss:.3f}'
                     )
 
                     
-            print(f"Finished epoch {epoch + 1}/{num_epochs}")
+            print(f'Finished epoch {epoch + 1}/{num_epochs}')
             generate_and_print_simple(model,tokenizer,device,start_context)
             srt_batch=0
 
@@ -90,12 +90,13 @@ def Fit(
             session_elapsed = time.perf_counter() - session_start_time
             session_start_time = time.perf_counter()
             current_total_time = total_training_time + session_elapsed
-            CheckPoint.set_train_time(current_total_time)
+            total_training_time=current_total_time
+            CheckPoint.set_train_time(total_training_time)
             CheckPoint.save_checkpoint()
 
-            print(f"Saved ew epoch checkpoint at step {global_step}")
-        return train_losses, val_losses, track_tokens_seen
+            print(f'Saved ew epoch checkpoint at step {global_step}')
+        return train_losses, val_losses
     
     except KeyboardInterrupt:
-        print("\nTraining interrupted. Returning the latest losses...")
-        return train_losses, val_losses,track_tokens_seen
+        print('\nTraining interrupted. Returning the latest losses...')
+        return train_losses, val_losses

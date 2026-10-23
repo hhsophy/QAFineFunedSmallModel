@@ -3,14 +3,14 @@ import torch
 import tiktoken
 import json
 from pathlib import Path
-tokenizer=tiktoken.get_encoding("gpt2")
+tokenizer=tiktoken.get_encoding('gpt2')
 
 # convert from text to token IDs
 def text_to_token_ids(text,tokenizer=None):
     if tokenizer is None:
         tokenizer=tokenizer
     
-    encoded=tokenizer.encode(text, allowed_special={"|<endoftext>|"})
+    encoded=tokenizer.encode(text, allowed_special={'|<endoftext>|'})
     encoded_tensor=torch.tensor(encoded).unsqueeze(0)
     return encoded_tensor
 
@@ -66,44 +66,44 @@ def generate_and_print_simple(model,tokenizer,device,start_context):
         token_ids=generate_text_simple(model=model,idx=encoded,max_new_tokens=50,context_size=contex_size)
 
     decoded_text=token_ids_to_text(token_ids,tokenizer)
-    print(decoded_text.replace("\n", " "))     
+    print(decoded_text.replace('\n', ' '))     
     model.train()
 
 def format_time(seconds):
     hours, remainder = divmod(int(seconds), 3600)
     minutes, seconds = divmod(remainder, 60)
 
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    return f'{hours:02d}:{minutes:02d}:{seconds:02d}'
 
 
 def save_losses(train_losses=[], test_losses=[], val_losses=[],
-                path="results/losses.json", resume=True):
+                path='results/losses.json', resume=True):
 
     path = Path(path)
 
     if resume and path.exists():
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, 'r', encoding='utf-8') as f:
             losses = json.load(f)
     else:
         losses = {
-            "train": [],
-            "test": [],
-            "val": []
+            'train': [],
+            'test': [],
+            'val': []
         }
 
     # Make sure all three keys exist
-    for key in ("train", "test", "val"):
+    for key in ('train', 'test', 'val'):
         losses.setdefault(key, [])
 
     # Append new losses
-    losses["train"].extend(train_losses)
-    losses["test"].extend(test_losses)
-    losses["val"].extend(val_losses)
+    losses['train'].extend(train_losses)
+    losses['test'].extend(test_losses)
+    losses['val'].extend(val_losses)
 
     # Create the directory if it doesn't exist
     path.parent.mkdir(parents=True, exist_ok=True)
 
     # Create the file or overwrite the existing file
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, 'w', encoding='utf-8') as f:
         json.dump(losses, f, indent=4)
 
